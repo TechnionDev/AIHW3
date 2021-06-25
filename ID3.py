@@ -5,6 +5,17 @@ import numpy as np
 class ID3:
     def __init__(self):
         pass
+
+    @staticmethod
+    def read_data(file):
+        raw_data = np.genfromtxt(file, delimiter=',')
+        features = np.zeros((raw_data.shape[0], len(raw_data[0])-1))
+        labels = np.zeros((raw_data.shape[0]), dtype=np.long)
+        for sample in range(raw.shape[0]):
+            label[sample] = (1 if my_data[sample][0] == b'M' else 0)
+            for feature in range(30):
+                new_data[sample, feature + 1] = my_data[sample][feature + 1]
+
     @staticmethod
     def calc_regression_tree(data)->int:
         max_ig = 0
@@ -14,8 +25,11 @@ class ID3:
 
     @staticmethod
     def fit_predict(train, test):
-        my_data = np.genfromtxt(train, delimiter=',', dtype="S1," + "f8," * 29 + "f8")
+
+        # Read the train data
+
         new_data = np.zeros((my_data.shape[0], len(my_data[0])))
+
         for sample in range(my_data.shape[0]):
             new_data[sample, 0] = (1 if my_data[sample][0] == b'M' else 0)
             for feature in range(30):
