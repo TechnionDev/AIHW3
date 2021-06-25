@@ -32,22 +32,6 @@ class ID3:
         pass
 
     @staticmethod
-    def read_train(file):
-        """
-        Reads the data given in the file for train, returns the features and the labels
-        :param file: the file name
-        :return: tuple of two numpy arrays, features and labels
-        """
-        raw_data = np.genfromtxt(file, delimiter=',', dtype="S1," + "f8," * (NUM_FEATURES - 1) + "f8")
-        features = np.zeros((raw_data.shape[0], NUM_FEATURES))
-        labels = np.zeros((raw_data.shape[0]), dtype=np.long)
-        for sample in range(raw_data.shape[0]):
-            labels[sample] = (1 if raw_data[sample][0] == b'M' else 0)
-            for feature in range(30):
-                features[sample, feature] = raw_data[sample][feature + 1]
-        return features, labels
-
-    @staticmethod
     def compute_entropy(x):
         """
         Computes the entropy of one dimensional binary vector x
@@ -61,13 +45,18 @@ class ID3:
         return -p * math.log(p, 2) - (1 - p) * math.log(1 - p, 2)
 
     @staticmethod
-    def construct_tree(train_features, train_labels) -> Node:
+    def construct_tree(train_features, train_labels, set_size_pruning) -> Node:
 
         num_samples = train_features.shape[0]
 
         if np.min(train_labels) == np.max(train_labels):
             # Return leaf according to the value
             return Node(leaf=np.min(train_labels))
+
+        if num_samples <= set_size_pruning:
+            # Return leaf according to majority
+            n = Node(leaf=(1 if (np.sum(train_labels) >= (num_samples/2)) else 0))
+            return n
 
         max_entropy_idx = 0
         max_entropy = 0
@@ -126,34 +115,46 @@ class ID3:
         right_labels = train_labels[right_idxs]
 
         # Run recursively on left and right, splitting according to feature_{max_entropy_idx} >= tval
-        left = ID3.construct_tree(left_features, left_labels)
-        right = ID3.construct_tree(right_features, right_labels)
+        left = ID3.construct_tree(left_features, left_labels, set_size_pruning)
+        right = ID3.construct_tree(right_features, right_labels, set_size_pruning)
 
         return Node(left=left, right=right, feature=max_entropy_idx, t=tval)
 
     @staticmethod
-    def fit_predict(train, test):
+    def depth(node) -> int:
+        if node.leaf == -1:
+            return max(ID3.depth(node.left), ID3.depth(node.right)) + 1
+        return 0
 
-        # Read the train data
-        # TODO: Receive np array and not filename...
-        train_features, train_labels = ID3.read_train(train)
+    @staticmethod
+    def fit_predict(train, test, set_size_pruning=1):
+        """
+        Fits according to train and predicts on test
+        :param train: (num samples) x (num features + 1) vector where first column is label (1 for sick, 0 for not)
+        :param test: (num samples) x (num features) vector
+        :param set_size_pruning: the minimal set size for a node to not be a leaf (default 1 = no pruning)
+        :return: (num_samples) vector for predictions on test
+        """
 
         # Construct tree given the train data
-        tree = ID3.construct_tree(train_features, train_labels)
+        tree = ID3.construct_tree(train[:, 1:], train[:, 0], set_size_pruning)
 
-        num_samples = train_features.shape[0]
-        for sample in range(148, num_samples):
-            x = train_features[sample]
-            true_y = train_labels[sample]
+        num_samples = test.shape[0]
+        predictions = np.zeros(num_samples)
+        for sample in range(num_samples):
 
+            # Retrieve the sample
+            x = test[sample]
+
+            # Traverse the tree according to the sample
             node = tree
             while node.leaf == -1:
                 if x[node.feature] < node.t:
                     node = node.left
                 else:
                     node = node.right
-            assert(node.leaf == true_y)
 
+            # Save the prediction
+            predictions[sample] = node.leaf
 
-if '__main__' == __name__:
-    ID3.fit_predict("train.csv", None)
+        return predictions
