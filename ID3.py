@@ -9,6 +9,7 @@ class ID3:
     def calc_regression_tree(data)->int:
         max_ig = 0
         res_index = 0
+
         for i in range (data[0]):
 
     @staticmethod
