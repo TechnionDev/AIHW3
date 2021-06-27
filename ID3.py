@@ -1,6 +1,6 @@
-import csv
 import numpy as np
 import math
+from sklearn.model_selection import KFold
 
 NUM_FEATURES = 30
 
@@ -55,8 +55,7 @@ class ID3:
 
         if num_samples <= set_size_pruning:
             # Return leaf according to majority
-            n = Node(leaf=(1 if (np.sum(train_labels) >= (num_samples/2)) else 0))
-            return n
+            return Node(leaf=(1 if (np.sum(train_labels) > (num_samples/2)) else 0))
 
         max_entropy_idx = 0
         max_entropy = 0
@@ -158,3 +157,44 @@ class ID3:
             predictions[sample] = node.leaf
 
         return predictions
+
+# --- Pruning Experiment ---
+# Run using:
+# pruningExp("train.csv")
+def pruningExp(filename):
+    """
+    Runs the pruning experiment given the filename of the train data
+    :param file: the file name
+    """
+    # Read the data
+    raw_data = np.genfromtxt(filename, delimiter=',', dtype="S1," + "f8," * (NUM_FEATURES - 1) + "f8")
+    data = np.zeros((raw_data.shape[0], (NUM_FEATURES + 1)))
+    for sample in range(raw_data.shape[0]):
+        data[sample, 0] = (1 if raw_data[sample][0] == b'M' else 0)
+        for feature in range(30):
+            data[sample, feature+1] = raw_data[sample][feature + 1]
+
+    # Iterate over pruning
+    for pruning in range(1, 16):
+
+        # Divide into test and train via KFold
+        kf = KFold(n_splits=5, random_state=206560856, shuffle=True)
+        test_acc = 0
+        train_acc = 0
+        for train_index, test_index in kf.split(data):
+            train = data[train_index]
+            test = data[test_index]
+
+            predictions = ID3.fit_predict(train, test[:, 1:], pruning)
+
+            correct = np.sum(predictions == test[:, 0])
+            test_acc += (correct / len(test))
+
+            predictions = ID3.fit_predict(train, train[:, 1:], pruning)
+            train_acc += (np.sum(predictions == train[:, 0]) / len(train))
+
+        print(f'Pruning {pruning}: test error={round(test_acc / 5, 3)} and train error={round(train_acc / 5, 3)}')
+
+
+if '__main__' == __name__:
+    pruningExp("train.csv")

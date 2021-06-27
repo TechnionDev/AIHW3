@@ -27,7 +27,7 @@ if '__main__' == __name__:
     for pruning in range(16):
 
         # Divide into test and train via KFold
-        kf = KFold(n_splits=5, random_state=214255739, shuffle=True)
+        kf = KFold(n_splits=5, random_state=206560856, shuffle=True)
         test_acc = 0
         train_acc = 0
         for train_index, test_index in kf.split(data):
@@ -43,4 +43,4 @@ if '__main__' == __name__:
             predictions = ID3.fit_predict(train, train[:, 1:], pruning)
             train_acc += (np.sum(predictions == train[:, 0]) / len(train))
 
-        print(f'pruning {pruning}: error={round(test_acc / 5, 3)} and {round(train_acc/5, 3)}')
+        print(f'pruning {pruning}: error={round(test_acc / 5, 3)} and {round(train_acc / 5, 3)}')
